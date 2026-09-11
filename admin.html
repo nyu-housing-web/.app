@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AgentConnect — Admin Inbox</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --purple-700:#5B21B6; --purple-600:#6D28D9; --purple-100:#F1EAFB;
+    --black:#0B0A0D; --white:#FFFFFF; --grey-100:#F4F3F7; --grey-300:#D9D6E3; --grey-500:#8E8A9C;
+    --radius-md:11px; --radius-lg:16px;
+    --shadow:0 10px 26px rgba(20,10,40,0.12);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Manrope',sans-serif;background:var(--grey-100);color:var(--black);}
+  .hidden{display:none !important;}
+
+  /* ---- login screen ---- */
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .login-card{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:28px 24px;max-width:360px;width:100%;}
+  .login-card h1{font-size:18px;margin:0 0 4px;}
+  .login-card p{font-size:12.5px;color:var(--grey-500);margin:0 0 18px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:11px;font-weight:700;margin-bottom:5px;}
+  .field input, .field textarea{width:100%;border:1.5px solid var(--grey-300);border-radius:9px;padding:9px 11px;font:500 13px inherit;outline:none;}
+  .field input:focus, .field textarea:focus{border-color:var(--purple-600);}
+  .btn{border:none;border-radius:999px;padding:10px 16px;font:800 12.5px inherit;cursor:pointer;background:var(--black);color:var(--white);}
+  .btn:hover{background:var(--purple-700);}
+  .btn.full{width:100%;}
+  .btn.secondary{background:var(--grey-100);color:var(--black);}
+  .error-msg{color:#C0392B;font-size:11.5px;margin-top:8px;}
+  .denied{max-width:360px;margin:80px auto;text-align:center;padding:0 20px;}
+
+  /* ---- app shell ---- */
+  .app-shell{display:flex;height:100vh;}
+  .sidebar{width:340px;flex-shrink:0;background:var(--white);border-right:1px solid var(--grey-300);display:flex;flex-direction:column;}
+  .sidebar-header{padding:16px;border-bottom:1px solid var(--grey-300);display:flex;align-items:center;justify-content:space-between;}
+  .sidebar-header h1{font-size:15px;margin:0;}
+  .tabs{display:flex;gap:6px;padding:10px 12px;border-bottom:1px solid var(--grey-300);}
+  .tab-btn{flex:1;border:none;background:var(--grey-100);border-radius:8px;padding:8px;font:700 11px inherit;cursor:pointer;color:var(--grey-500);}
+  .tab-btn.active{background:var(--black);color:var(--white);}
+  .conv-list{flex:1;overflow-y:auto;}
+  .conv-row{display:flex;gap:10px;padding:12px 14px;cursor:pointer;border-bottom:1px solid var(--grey-100);}
+  .conv-row:hover, .conv-row.active{background:var(--purple-100);}
+  .conv-row img{width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;background:var(--grey-100);}
+  .conv-row-info{min-width:0;flex:1;}
+  .conv-row-info strong{display:block;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .conv-row-info span.sub{display:block;font-size:10.5px;color:var(--grey-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .conv-row-time{font-size:9.5px;color:var(--grey-500);flex-shrink:0;}
+  .empty-note{padding:30px 16px;text-align:center;color:var(--grey-500);font-size:12px;}
+
+  .main-panel{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .thread-header{padding:14px 18px;border-bottom:1px solid var(--grey-300);background:var(--white);display:flex;align-items:center;gap:10px;}
+  .thread-header img{width:34px;height:34px;border-radius:50%;object-fit:cover;background:var(--grey-100);}
+  .thread-header strong{font-size:13.5px;display:block;}
+  .thread-header span{font-size:11px;color:var(--grey-500);}
+  .thread-body{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:10px;background:var(--grey-100);}
+  .bubble{max-width:60%;padding:10px 13px;border-radius:14px;font-size:12.5px;line-height:1.45;}
+  .bubble.user{align-self:flex-start;background:var(--white);}
+  .bubble.agent{align-self:flex-end;background:var(--black);color:var(--white);}
+  .bubble img, .bubble video{max-width:220px;border-radius:10px;display:block;margin-bottom:4px;}
+  .composer{display:flex;gap:8px;padding:14px 18px;border-top:1px solid var(--grey-300);background:var(--white);align-items:center;}
+  .composer input[type=text]{flex:1;border:1.5px solid var(--grey-300);border-radius:999px;padding:10px 14px;font:500 13px inherit;outline:none;}
+  .composer input[type=text]:focus{border-color:var(--purple-600);}
+  .icon-btn{width:38px;height:38px;border-radius:50%;border:none;background:var(--grey-100);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+  .icon-btn.send{background:var(--black);color:var(--white);}
+  .placeholder-panel{flex:1;display:flex;align-items:center;justify-content:center;color:var(--grey-500);font-size:13px;}
+
+  /* ---- users management ---- */
+  .users-list{padding:12px;overflow-y:auto;flex:1}.user-row{display:flex;gap:10px;align-items:center;padding:11px;border-bottom:1px solid var(--grey-100);cursor:pointer}.user-row:hover{background:var(--purple-100)}.user-row img{width:40px;height:40px;border-radius:50%;object-fit:cover;background:var(--grey-100)}.user-info{min-width:0;flex:1}.user-info strong{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.user-info span{display:block;font-size:10px;color:var(--grey-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.user-balance{font-size:11px;font-weight:800;white-space:nowrap}.user-modal{position:fixed;inset:0;background:rgba(11,10,13,.58);z-index:5000;display:flex;align-items:center;justify-content:center;padding:16px}.user-modal.hidden{display:none!important}.user-modal-card{width:min(100%,440px);max-height:92vh;overflow:auto;background:#fff;border-radius:18px;padding:20px;box-shadow:var(--shadow)}.user-modal-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.user-modal-head img{width:48px;height:48px;border-radius:50%;object-fit:cover;background:var(--grey-100)}.user-modal-head h2{font-size:15px;margin:0}.user-modal-head p{font-size:10px;color:var(--grey-500);margin:3px 0 0}.user-modal-actions{display:flex;gap:8px;margin-top:14px}.user-modal-actions .btn{flex:1}.user-detail{background:var(--grey-100);border-radius:10px;padding:9px 10px;margin-bottom:8px;font-size:11px}.user-detail b{display:block;font-size:9px;color:var(--grey-500);text-transform:uppercase;margin-bottom:3px}.user-modal-card .field{margin-bottom:10px}.user-modal-card .field input{height:40px}.save-status{font-size:11.5px;margin-top:8px;color:#1A9A5C}
+  /* ---- payout settings ---- */
+  .settings-panel{max-width:420px;margin:40px auto;background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:24px;}
+  .settings-panel h2{margin:0 0 4px;font-size:16px;}
+  .settings-panel p.sub{margin:0 0 18px;font-size:12px;color:var(--grey-500);}
+  .save-status{font-size:11.5px;margin-top:8px;color:#1A9A5C;}
+</style>
+</head>
+<body>
+
+<!-- ===== Login ===== -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-card">
+    <h1>Admin sign in</h1>
+    <p>Sign in with your AgentConnect admin account.</p>
+    <div class="field"><label for="adminEmail">Email</label><input id="adminEmail" type="email" placeholder="you@example.com"></div>
+    <div class="field"><label for="adminPassword">Password</label><input id="adminPassword" type="password" placeholder="Your password"></div>
+    <button class="btn full" id="adminLoginBtn">Sign in</button>
+    <div class="error-msg hidden" id="loginError"></div>
+  </div>
+</div>
+
+<!-- ===== Access denied (signed in but not an admin) ===== -->
+<div class="denied hidden" id="deniedWrap">
+  <h1>Not authorized</h1>
+  <p>This account isn't on the admin list. Ask the AgentConnect owner to add your user ID to <code>admin_users</code>.</p>
+  <button class="btn secondary" id="deniedSignOutBtn">Sign out</button>
+</div>
+
+<!-- ===== Admin app ===== -->
+<div class="app-shell hidden" id="appShell">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h1>AgentConnect Admin</h1>
+      <button class="icon-btn" id="signOutBtn" title="Sign out"><i data-lucide="log-out" size="15"></i></button>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" id="inboxTabBtn">Inbox</button>
+      <button class="tab-btn" id="usersTabBtn">Users</button><button class="tab-btn" id="payoutTabBtn">Payout details</button>
+    </div>
+    <div class="conv-list" id="convList"></div>
+  </div>
+
+  <div class="main-panel" id="inboxPanel">
+    <div class="placeholder-panel" id="threadPlaceholder">Select a conversation to view messages.</div>
+    <div class="hidden" id="threadWrap" style="display:flex;flex-direction:column;flex:1;min-height:0;">
+      <div class="thread-header">
+        <img id="threadAvatar" src="" alt="">
+        <div>
+          <strong id="threadUserName">User</strong>
+          <span id="threadAgentName">Agent</span>
+        </div>
+      </div>
+      <div class="thread-body" id="threadBody"></div>
+      <div class="composer">
+        <input type="file" id="replyMediaInput" accept="image/*,video/*" style="display:none">
+        <button class="icon-btn" id="replyAttachBtn"><i data-lucide="paperclip" size="15"></i></button>
+        <input type="text" id="replyInput" placeholder="Write a reply…">
+        <button class="icon-btn send" id="replySendBtn"><i data-lucide="send" size="15"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-panel hidden" id="usersPanel">
+    <div class="thread-header"><div><strong>All users</strong><span id="usersCount">Loading…</span></div><button class="btn secondary" id="refreshUsersBtn">Refresh</button></div>
+    <div class="users-list" id="usersList"><div class="empty-note">Loading users…</div></div>
+  </div>
+
+  <div class="main-panel hidden" id="payoutPanel">
+    <div class="settings-panel">
+      <h2>Payout / receive-money details</h2>
+      <p class="sub">These bank details are shown to every user in the app's "Top Up" screen.</p>
+      <div class="field"><label for="payoutBankName">Bank name</label><input id="payoutBankName" placeholder="e.g. Agent Trust Bank"></div>
+      <div class="field"><label for="payoutAccountName">Account name</label><input id="payoutAccountName" placeholder="e.g. AgentConnect"></div>
+      <div class="field"><label for="payoutAccountNumber">Account number</label><input id="payoutAccountNumber" placeholder="e.g. 0142385966"></div>
+      <button class="btn full" id="savePayoutBtn">Save details</button>
+      <div class="save-status hidden" id="payoutSaveStatus">Saved.</div>
+    </div>
+  </div>
+</div>
+
+<div class="user-modal hidden" id="userModal">
+  <div class="user-modal-card">
+    <div class="user-modal-head"><img id="selectedUserAvatar" src="" alt=""><div><h2 id="selectedUserName">User</h2><p id="selectedUserEmail"></p></div><button class="icon-btn" id="closeUserModal" style="margin-left:auto">✕</button></div>
+    <div class="user-detail"><b>Account number</b><span id="selectedUserAccountNumber">Not set</span></div>
+    <div class="user-detail"><b>Available balance</b><span id="selectedUserBalance">$0.00</span></div>
+    <h3 style="font-size:13px;margin:16px 0 9px">Edit user details</h3>
+    <div class="field"><label for="editBalance">Available balance</label><input id="editBalance" type="number" step="0.01" min="0" placeholder="0.00"></div>
+    <div class="field"><label for="editBankName">Bank name</label><input id="editBankName" placeholder="Bank name"></div>
+    <div class="field"><label for="editAccountName">Account name</label><input id="editAccountName" placeholder="Account name"></div>
+    <div class="field"><label for="editAccountNumber">Account number</label><input id="editAccountNumber" placeholder="Account number"></div>
+    <button class="btn full" id="saveUserDetailsBtn">Save user details</button>
+    <div class="save-status hidden" id="userSaveStatus">Saved.</div>
+    <div class="user-modal-actions"><button class="btn secondary" id="chatWithUserBtn">Chat with user</button><button class="btn secondary" id="cancelUserModal">Close</button></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://vhxtdchncwzxdfdwacyw.supabase.co';
+const SUPABASE_ANON_KEY = 'PASTE_YOUR_SUPABASE_ANON_KEY_HERE';
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const $=id=>document.getElementById(id);
+
+let conversations=[];
+let users=[];
+let selectedUser=null;
+let activeConversation=null;
+let pendingReplyMedia=null;
+let liveChannel=null;
+
+function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+function fmtTime(iso){ try{ return new Date(iso).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } }
+
+// ---------------- auth ----------------
+async function checkAdminAndBoot(){
+  const {data:{session}} = await supabaseClient.auth.getSession();
+  if(!session){ show('loginWrap'); return; }
+  const {data: adminRow, error} = await supabaseClient.from('admin_users').select('id').eq('id', session.user.id).maybeSingle();
+  if(error || !adminRow){ show('deniedWrap'); return; }
+  show('appShell');
+  boot();
+}
+function show(id){
+  ['loginWrap','deniedWrap','appShell'].forEach(x=> $(x).classList.toggle('hidden', x!==id));
+}
+
+$('adminLoginBtn').addEventListener('click', async ()=>{
+  const email=$('adminEmail').value.trim().toLowerCase(), password=$('adminPassword').value;
+  $('loginError').classList.add('hidden');
+  if(!email||!password) return;
+  const {error} = await supabaseClient.auth.signInWithPassword({email,password});
+  if(error){ $('loginError').textContent=error.message; $('loginError').classList.remove('hidden'); return; }
+  checkAdminAndBoot();
+});
+$('deniedSignOutBtn').addEventListener('click', async ()=>{ await supabaseClient.auth.signOut(); location.reload(); });
+$('signOutBtn').addEventListener('click', async ()=>{ await supabaseClient.auth.signOut(); location.reload(); });
+
+// ---------------- tabs ----------------
+$('inboxTabBtn').addEventListener('click', ()=> switchTab('inbox'));
+$('usersTabBtn').addEventListener('click', ()=> switchTab('users'));
+$('payoutTabBtn').addEventListener('click', ()=> switchTab('payout'));
+function switchTab(tab){
+  $('inboxTabBtn').classList.toggle('active', tab==='inbox');
+  $('usersTabBtn').classList.toggle('active', tab==='users');
+  $('payoutTabBtn').classList.toggle('active', tab==='payout');
+  $('inboxPanel').classList.toggle('hidden', tab!=='inbox');
+  $('usersPanel').classList.toggle('hidden', tab!=='users');
+  $('payoutPanel').classList.toggle('hidden', tab!=='payout');
+  $('convList').classList.toggle('hidden', tab!=='inbox');
+  if(tab==='users') loadUsers();
+  if(tab==='payout') loadPayoutSettings();
+}
+
+// ---------------- users ----------------
+async function loadUsers(){
+  const [profilesRes, financialsRes, bankRes] = await Promise.all([
+    supabaseClient.from('profiles').select('id,full_name,email,avatar_url,onboarding_step,onboarding_completed,created_at').order('created_at',{ascending:false}),
+    supabaseClient.from('user_financials').select('user_id,available_balance,currency'),
+    supabaseClient.from('user_bank_details').select('user_id,bank_name,account_name,account_number')
+  ]);
+  if(profilesRes.error){ console.error(profilesRes.error); $('usersList').innerHTML='<div class="empty-note">Could not load users.</div>'; return; }
+  if(financialsRes.error) console.error(financialsRes.error); if(bankRes.error) console.error(bankRes.error);
+  const fm=new Map((financialsRes.data||[]).map(x=>[x.user_id,x])); const bm=new Map((bankRes.data||[]).map(x=>[x.user_id,x]));
+  users=(profilesRes.data||[]).map(u=>({...u,user_financials:fm.get(u.id)||null,user_bank_details:bm.get(u.id)||null}));
+  $('usersCount').textContent=`${users.length} account${users.length===1?'':'s'}`; renderUsers();
+}
+function money(v,currency){const n=Number(v||0);const sym=currency==='NGN'?'₦':currency==='EUR'?'€':currency==='GBP'?'£':'$';return sym+n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});}
+function one(row){return Array.isArray(row)?(row[0]||null):(row||null)}
+function renderUsers(){
+  const list=$('usersList'); list.innerHTML='';
+  if(!users.length){list.innerHTML='<div class="empty-note">No registered users yet.</div>';return;}
+  users.forEach(u=>{
+    const f=one(u.user_financials), name=u.full_name||u.email||'User', avatar=u.avatar_url||('https://ui-avatars.com/api/?name='+encodeURIComponent(name)+'&background=F1EAFB&color=5B21B6');
+    const row=document.createElement('div'); row.className='user-row';
+    row.innerHTML=`<img src="${avatar}" alt=""><div class="user-info"><strong>${escapeHtml(name)}</strong><span>${escapeHtml(u.email||'')}</span></div><div class="user-balance">${money(f?.available_balance,f?.currency)}</div>`;
+    row.addEventListener('click',()=>openUserModal(u)); list.appendChild(row);
+  });
+}
+function openUserModal(u){
+  selectedUser=u; const f=one(u.user_financials), b=one(u.user_bank_details), name=u.full_name||u.email||'User';
+  $('selectedUserName').textContent=name; $('selectedUserEmail').textContent=u.email||''; $('selectedUserAvatar').src=u.avatar_url||('https://ui-avatars.com/api/?name='+encodeURIComponent(name)+'&background=F1EAFB&color=5B21B6');
+  $('selectedUserAccountNumber').textContent=b?.account_number||'Not set'; $('selectedUserBalance').textContent=money(f?.available_balance,f?.currency);
+  $('editBalance').value=f?.available_balance??0; $('editBankName').value=b?.bank_name||''; $('editAccountName').value=b?.account_name||''; $('editAccountNumber').value=b?.account_number||'';
+  $('userModal').classList.remove('hidden'); lucide.createIcons();
+}
+function closeUserModal(){$('userModal').classList.add('hidden'); selectedUser=null;}
+$('closeUserModal').addEventListener('click',closeUserModal); $('cancelUserModal').addEventListener('click',closeUserModal); $('userModal').addEventListener('click',e=>{if(e.target===$('userModal'))closeUserModal()}); $('refreshUsersBtn').addEventListener('click',loadUsers);
+$('saveUserDetailsBtn').addEventListener('click',async()=>{
+  if(!selectedUser) return; const btn=$('saveUserDetailsBtn'); btn.disabled=true;
+  const balance=Number($('editBalance').value); if(!Number.isFinite(balance)||balance<0){btn.disabled=false;return alert('Enter a valid non-negative balance.');}
+  try{
+    const {error}=await supabaseClient.rpc('admin_update_user_details',{p_user_id:selectedUser.id,p_available_balance:balance,p_bank_name:$('editBankName').value.trim(),p_account_name:$('editAccountName').value.trim(),p_account_number:$('editAccountNumber').value.trim()});
+    if(error) throw error; $('userSaveStatus').classList.remove('hidden'); await loadUsers(); const fresh=users.find(x=>x.id===selectedUser.id); if(fresh) openUserModal(fresh); setTimeout(()=>$('userSaveStatus').classList.add('hidden'),1800);
+  }catch(e){console.error(e);alert('Could not save user details: '+(e.message||''));}finally{btn.disabled=false;}
+});
+$('chatWithUserBtn').addEventListener('click',async()=>{
+  if(!selectedUser) return;
+  const user=selectedUser; closeUserModal();
+  const {data: existing,error:findErr}=await supabaseClient.from('conversations').select('*').eq('user_id',user.id).order('last_message_at',{ascending:false}).limit(1).maybeSingle();
+  if(findErr) return alert('Could not find this user chat: '+findErr.message);
+  if(existing){openConversation({...existing,profiles:{full_name:user.full_name,email:user.email,avatar_url:user.avatar_url}});switchTab('inbox');return;}
+  const {data:session}=await supabaseClient.auth.getSession();
+  const {data:created,error}=await supabaseClient.from('conversations').insert({user_id:user.id,agent_id:session.session.user.id,agent_name:'AgentConnect Admin',agent_photo:user.avatar_url||null}).select().single();
+  if(error) return alert('Could not start chat: '+error.message);
+  const c={...created,profiles:{full_name:user.full_name,email:user.email,avatar_url:user.avatar_url}}; switchTab('inbox'); openConversation(c);
+});
+
+// ---------------- inbox ----------------
+async function boot(){
+  lucide.createIcons();
+  await Promise.all([loadConversations(), loadUsers()]);
+  subscribeToAllMessages();
+}
+
+async function loadConversations(){
+  const {data, error} = await supabaseClient
+    .from('conversations')
+    .select('*, profiles:user_id(full_name, email, avatar_url)')
+    .order('last_message_at', {ascending:false});
+  if(error){ console.error(error); $('convList').innerHTML='<div class="empty-note">Could not load conversations.</div>'; return; }
+  conversations = data||[];
+  renderConvList();
+}
+
+function renderConvList(){
+  const list=$('convList');
+  if(!conversations.length){ list.innerHTML='<div class="empty-note">No conversations yet.</div>'; return; }
+  list.innerHTML='';
+  conversations.forEach(c=>{
+    const row=document.createElement('div');
+    row.className='conv-row'+(activeConversation&&activeConversation.id===c.id?' active':'');
+    const userName = c.profiles?.full_name || c.profiles?.email || 'User';
+    const avatar = c.profiles?.avatar_url || ('https://ui-avatars.com/api/?name='+encodeURIComponent(userName)+'&background=F1EAFB&color=5B21B6');
+    row.innerHTML = `
+      <img src="${avatar}" alt="">
+      <div class="conv-row-info">
+        <strong>${escapeHtml(userName)}</strong>
+        <span class="sub">with ${escapeHtml(c.agent_name)}</span>
+      </div>
+      <div class="conv-row-time">${fmtTime(c.last_message_at)}</div>`;
+    row.addEventListener('click', ()=> openConversation(c));
+    list.appendChild(row);
+  });
+}
+
+async function openConversation(c){
+  activeConversation=c;
+  renderConvList();
+  $('threadPlaceholder').classList.add('hidden');
+  $('threadWrap').classList.remove('hidden');
+  const userName = c.profiles?.full_name || c.profiles?.email || 'User';
+  const avatar = c.profiles?.avatar_url || ('https://ui-avatars.com/api/?name='+encodeURIComponent(userName)+'&background=F1EAFB&color=5B21B6');
+  $('threadAvatar').src=avatar;
+  $('threadUserName').textContent=userName;
+  $('threadAgentName').textContent='Conversation with '+c.agent_name;
+
+  $('threadBody').innerHTML='<div class="empty-note">Loading…</div>';
+  const {data:messages, error} = await supabaseClient.from('messages').select('*').eq('conversation_id', c.id).order('created_at',{ascending:true});
+  if(error){ console.error(error); $('threadBody').innerHTML='<div class="empty-note">Could not load messages.</div>'; return; }
+  renderThread(messages||[]);
+}
+
+function renderThread(messages){
+  const body=$('threadBody');
+  body.innerHTML='';
+  if(!messages.length){ body.innerHTML='<div class="empty-note">No messages yet.</div>'; return; }
+  messages.forEach(appendThreadBubble);
+  body.scrollTop=body.scrollHeight;
+}
+function appendThreadBubble(m){
+  const bubble=document.createElement('div');
+  bubble.className='bubble '+(m.sender==='agent'?'agent':'user');
+  let mediaHtml='';
+  if(m.media_url){ mediaHtml = m.media_type==='video' ? `<video src="${m.media_url}" controls></video>` : `<img src="${m.media_url}" alt="attachment">`; }
+  bubble.innerHTML = mediaHtml + (m.body?`<div>${escapeHtml(m.body)}</div>`:'');
+  $('threadBody').appendChild(bubble);
+  $('threadBody').scrollTop=$('threadBody').scrollHeight;
+}
+
+$('replyAttachBtn').addEventListener('click', ()=> $('replyMediaInput').click());
+$('replyMediaInput').addEventListener('change', e=>{
+  const f=e.target.files[0]; if(f) pendingReplyMedia=f;
+});
+
+async function sendReply(){
+  const text=$('replyInput').value.trim();
+  if(!activeConversation || (!text && !pendingReplyMedia)) return;
+  $('replySendBtn').disabled=true;
+  try{
+    let media_url=null, media_type=null;
+    if(pendingReplyMedia){
+      const isVideo=pendingReplyMedia.type.startsWith('video/');
+      const ext=(pendingReplyMedia.name.split('.').pop()||(isVideo?'mp4':'jpg')).toLowerCase();
+      const path=`${activeConversation.id}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+      const {error: upErr} = await supabaseClient.storage.from('chat-media').upload(path, pendingReplyMedia);
+      if(upErr) throw upErr;
+      const {data}=supabaseClient.storage.from('chat-media').getPublicUrl(path);
+      media_url=data?.publicUrl||null; media_type=isVideo?'video':'image';
+    }
+    const {data: session}=await supabaseClient.auth.getSession();
+    const row={conversation_id:activeConversation.id, sender:'agent', sender_id:session.session.user.id, body:text||null, media_url, media_type};
+    const {data:inserted, error}=await supabaseClient.from('messages').insert(row).select().single();
+    if(error) throw error;
+    appendThreadBubble(inserted);
+    $('replyInput').value='';
+    pendingReplyMedia=null; $('replyMediaInput').value='';
+  }catch(e){ console.error(e); alert('Could not send reply: '+(e.message||'')); }
+  $('replySendBtn').disabled=false;
+}
+$('replySendBtn').addEventListener('click', sendReply);
+$('replyInput').addEventListener('keydown', e=>{ if(e.key==='Enter') sendReply(); });
+
+function subscribeToAllMessages(){
+  if(liveChannel) supabaseClient.removeChannel(liveChannel);
+  liveChannel = supabaseClient.channel('admin-inbox')
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'messages'}, payload=>{
+      const msg=payload.new;
+      if(activeConversation && msg.conversation_id===activeConversation.id && msg.sender==='user'){
+        appendThreadBubble(msg);
+      }
+      loadConversations(); // refresh ordering/snippets
+    })
+    .subscribe();
+}
+
+// ---------------- payout settings ----------------
+async function loadPayoutSettings(){
+  const {data,error} = await supabaseClient.from('payout_settings').select('*').eq('id',1).maybeSingle();
+  if(error){ console.error(error); return; }
+  if(data){
+    $('payoutBankName').value=data.bank_name||'';
+    $('payoutAccountName').value=data.account_name||'';
+    $('payoutAccountNumber').value=data.account_number||'';
+  }
+}
+$('savePayoutBtn').addEventListener('click', async ()=>{
+  const row={
+    id:1,
+    bank_name:$('payoutBankName').value.trim(),
+    account_name:$('payoutAccountName').value.trim(),
+    account_number:$('payoutAccountNumber').value.trim(),
+    updated_at:new Date().toISOString()
+  };
+  const {error}=await supabaseClient.from('payout_settings').upsert(row);
+  if(error){ alert('Could not save: '+error.message); return; }
+  $('payoutSaveStatus').classList.remove('hidden');
+  setTimeout(()=> $('payoutSaveStatus').classList.add('hidden'), 2000);
+});
+
+checkAdminAndBoot();
+</script>
+</body>
+</html>

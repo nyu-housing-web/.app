@@ -1,2 +1,5 @@
-https://vhxtdchncwzxdfdwacyw.supabase.co
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoeHRkY2huY3d6eGRmZHdhY3l3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxNTA3MzIsImV4cCI6MjEwNDcyNjczMn0.3KiMrN1tYe5mDkEZMno39oe6jCdfoxdWrWVZMz1weOM
+insert into public.admin_users (id)
+select id
+from auth.users
+where lower(email) = lower('nasty00night@gmail.com')
+on conflict (id) do nothing;

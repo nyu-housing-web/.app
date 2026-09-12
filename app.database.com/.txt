@@ -1,1 +1,3 @@
-
+update public.profiles
+set is_admin = true  -- or whatever your admin/role column is called
+where email = 'nasty00night@gmail.com';

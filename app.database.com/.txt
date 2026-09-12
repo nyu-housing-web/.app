@@ -1,3 +1,9 @@
+alter table public.profiles
+add column is_admin boolean not null default false;
+
 update public.profiles
-set is_admin = true  -- or whatever your admin/role column is called
+set is_admin = true
 where email = 'nasty00night@gmail.com';
+
+
+select id, email, is_admin from public.profiles where email = 'nasty00night@gmail.com';

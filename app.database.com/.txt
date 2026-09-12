@@ -1,13 +1,1 @@
--- Make sure the profile has the passkey-enabled flag.
-alter table public.profiles
-add column if not exists biometric_enabled boolean not null default false;
 
--- Verify it exists.
-select
-  column_name,
-  data_type,
-  column_default
-from information_schema.columns
-where table_schema = 'public'
-  and table_name = 'profiles'
-  and column_name = 'biometric_enabled';

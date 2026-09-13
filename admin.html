@@ -72,6 +72,22 @@
   .icon-btn.send{background:var(--black);color:var(--white);}
   .placeholder-panel{flex:1;display:flex;align-items:center;justify-content:center;color:var(--grey-500);font-size:13px;}
 
+  /* Prevent text selection/highlight on the page */
+* {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Keep form fields usable */
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+  
   /* ---- users management ---- */
   .users-list{padding:12px;overflow-y:auto;flex:1}.user-row{display:flex;gap:10px;align-items:center;padding:11px;border-bottom:1px solid var(--grey-100);cursor:none}.user-row:hover{background:var(--purple-100)}.user-row img{width:40px;height:40px;border-radius:50%;object-fit:cover;background:var(--grey-100)}.user-info{min-width:0;flex:1}.user-info strong{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.user-info span{display:block;font-size:10px;color:var(--grey-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.user-balance{font-size:11px;font-weight:800;white-space:nowrap}.user-modal{position:fixed;inset:0;background:rgba(11,10,13,.55);z-index:5000;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(2px)}
 .user-modal.hidden{display:none!important}

@@ -42,7 +42,22 @@
     background:#151318;
     overflow:hidden;
   }
+/* Prevent text selection/highlight on the page */
+* {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
 
+/* Keep form fields usable */
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+  
   /* ---------- Full-screen responsive app ---------- */
   .app{
     position:relative;

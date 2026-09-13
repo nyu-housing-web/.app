@@ -1,1 +1,65 @@
+-- ============================================================
+-- AgentConnect — Restore Admin Access
+-- Admin email: nasty00night@gmail.com
+-- ============================================================
 
+-- Make sure the admin allow-list exists.
+create table if not exists public.admin_users (
+  id uuid primary key references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+-- Make sure RLS is enabled.
+alter table public.admin_users enable row level security;
+
+-- Allow a logged-in user to check their own admin record.
+drop policy if exists admin_users_self_select on public.admin_users;
+
+create policy admin_users_self_select
+on public.admin_users
+for select
+to authenticated
+using (id = auth.uid());
+
+-- Find the existing Auth account by email and add it
+-- to the AgentConnect admin allow-list.
+insert into public.admin_users (id)
+select id
+from auth.users
+where lower(email) = lower('nasty00night@gmail.com')
+on conflict (id) do nothing;
+
+-- Make sure the admin authorization function is correct.
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.admin_users
+    where id = auth.uid()
+  );
+$$;
+
+-- Allow authenticated users to execute the admin check.
+grant execute on function public.is_admin() to authenticated;
+
+-- ============================================================
+-- VERIFY
+-- ============================================================
+
+select
+  u.id,
+  u.email,
+  u.email_confirmed_at,
+  case
+    when a.id is not null then 'ADMIN ACCESS ENABLED'
+    else 'NOT ADMIN'
+  end as admin_status
+from auth.users u
+left join public.admin_users a
+  on a.id = u.id
+where lower(u.email) = lower('nasty00night@gmail.com');
